@@ -1,0 +1,12 @@
+.Message {
+    display: block;
+    margin: 10px auto;
+    padding: 10px 20px;
+    border-radius: 5px;
+    
+    &.me{
+        color: rgba(70,28,28);
+        float: right;
+        background-color: azure;
+    }
+}
