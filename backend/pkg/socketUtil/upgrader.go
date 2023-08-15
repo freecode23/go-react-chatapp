@@ -1,4 +1,4 @@
-package wsutil
+package socketUtil
 
 import (
 	"log"
@@ -12,7 +12,7 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-func Upgrade(w http.ResponseWriter, r *http.Request) (*websocket.Conn, error) {
+func upgrade(w http.ResponseWriter, r *http.Request) (*websocket.Conn, error) {
 	// 1. origin checking
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 
