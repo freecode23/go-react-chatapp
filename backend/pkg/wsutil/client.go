@@ -17,7 +17,7 @@ type Client struct {
 
 type Message struct {
 	// when it's converted to JSON, it will have the key name type.
-	Type int    `json:"type"`
+	Type int    `json:"type"` // type 1 means text frame
 	Body string `json:"body"`
 }
 
@@ -26,12 +26,12 @@ type Message struct {
 Get client's message and broadcast to chatroom's broadcast channel
 *
 */
-func (c *Client) BroadcastMessage() {
+func (c *Client) ListenMessages() {
 
 	//1.  will only be executed if theres error
 	// or if client exits
 	defer func() {
-		c.Chatroom.UnregisterChan <- c
+		c.Chatroom.UnregisteredClientsChan <- c
 		c.Conn.Close()
 	}()
 
@@ -49,7 +49,7 @@ func (c *Client) BroadcastMessage() {
 		message := Message{Type: messageType, Body: string(p)}
 
 		// 3. write on channel
-		c.Chatroom.Broadcast <- message
+		c.Chatroom.MessagesChan <- message
 
 		fmt.Printf("Message received: %+v\n", message)
 	}

@@ -12,7 +12,7 @@ import (
 websocket Chatroom is a struct from wsutil package
 *
 */
-func manageClientReq(chatroom *wsutil.Chatroom, w http.ResponseWriter, r *http.Request) {
+func handleNewClient(chatroom *wsutil.Chatroom, w http.ResponseWriter, r *http.Request) {
 	fmt.Println("websocket endpoint reached. serving")
 
 	// 1. upgrade http connection to web socket
@@ -29,10 +29,10 @@ func manageClientReq(chatroom *wsutil.Chatroom, w http.ResponseWriter, r *http.R
 	}
 
 	// 3. add clientPtr to the chatroom's Register
-	chatroom.RegisterChan <- clientPtr
+	chatroom.RegisteredClientsChan <- clientPtr
 
 	// 4. read messages from client and broadcast them (infinite loop)
-	clientPtr.BroadcastMessage()
+	clientPtr.ListenMessages()
 }
 
 func setupRoutes() {
@@ -43,11 +43,11 @@ func setupRoutes() {
 	// 2. go routine thread
 	// set up a single chatroom in the background
 	// will run concurrently without blocking the main thread.
-	go chatroomPtr.Start()
+	go chatroomPtr.ProcessChatroomEvents()
 
 	// 3. Define the callback function when client calls
 	websocketHandlerCallback := func(w http.ResponseWriter, r *http.Request) {
-		manageClientReq(chatroomPtr, w, r)
+		handleNewClient(chatroomPtr, w, r)
 	}
 
 	// 4. set up what to do on this route

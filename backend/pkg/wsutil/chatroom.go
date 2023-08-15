@@ -5,10 +5,10 @@ import (
 )
 
 type Chatroom struct {
-	RegisterChan   chan *Client
-	UnregisterChan chan *Client
-	Clients        map[*Client]bool // key client, value bool. made up set like in python
-	Broadcast      chan Message
+	RegisteredClientsChan   chan *Client
+	UnregisteredClientsChan chan *Client
+	Clients                 map[*Client]bool // key client, value bool. made up set like in python
+	MessagesChan            chan Message
 }
 
 /*
@@ -21,10 +21,10 @@ Return reference to a new Chatroom
 func NewChatroom() *Chatroom {
 
 	return &Chatroom{
-		RegisterChan:   make(chan *Client),
-		UnregisterChan: make(chan *Client),
-		Clients:        make(map[*Client]bool),
-		Broadcast:      make(chan Message),
+		RegisteredClientsChan:   make(chan *Client),
+		UnregisteredClientsChan: make(chan *Client),
+		Clients:                 make(map[*Client]bool),
+		MessagesChan:            make(chan Message),
 	}
 }
 
@@ -37,7 +37,7 @@ This is done continuously. as long as there is a client
 coming in, go routine will do something
 *
 */
-func (chatroom *Chatroom) Start() {
+func (chatroom *Chatroom) ProcessChatroomEvents() {
 
 	for {
 		select {
@@ -45,7 +45,7 @@ func (chatroom *Chatroom) Start() {
 		// case1: read the client that register
 		// client here looks like this: memory address &{ 0x140001542c0 0x1400006e0e0 <nil>}
 		// does not print out the actual values stored in pointers
-		case client := <-chatroom.RegisterChan:
+		case client := <-chatroom.RegisteredClientsChan:
 
 			// 1. insert client
 			chatroom.Clients[client] = true
@@ -61,7 +61,7 @@ func (chatroom *Chatroom) Start() {
 			break
 
 		// case2. read the client that unregister
-		case client := <-chatroom.UnregisterChan:
+		case client := <-chatroom.UnregisteredClientsChan:
 
 			// delete client from this map
 			delete(chatroom.Clients, client)
@@ -77,8 +77,8 @@ func (chatroom *Chatroom) Start() {
 			}
 			break
 
-		// cas3.
-		case msg := <-chatroom.Broadcast:
+		// cas3. pop the message that's just received
+		case msg := <-chatroom.MessagesChan:
 			fmt.Println("Sending message to all clients in chatroom")
 
 			for client := range chatroom.Clients {
