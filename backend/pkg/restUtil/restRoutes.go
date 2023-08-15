@@ -7,6 +7,7 @@ import (
 
 	"github.com/freecode23/go-react-chatapp/pkg/cache"
 	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 )
 
 type apiHandler struct {
@@ -14,6 +15,7 @@ type apiHandler struct {
 }
 
 func (a *apiHandler) getChatHistory(w http.ResponseWriter, r *http.Request) {
+
 	// 1. Fetch the last 30 messages
 	messages, err := a.Cache.GetLast30Messages()
 	if err != nil {
@@ -53,9 +55,16 @@ func SetupRestRoutes(cacheIf cache.Cache) {
 	// 2. assign routes and method
 	muxRouter.HandleFunc("/chatHistory", ah.getChatHistory).Methods("GET")
 
-	// 3. make muxRouter handle requests to the root path
+	// 3. Use the CORS middleware for your router
+	handler := cors.Default().Handler(muxRouter)
+
+	// 4. make muxRouter handle requests to the root path
 	http.Handle("/", muxRouter)
 
 	fmt.Println("Restapi: Starting port 8080")
-	http.ListenAndServe(":8080", nil)
+	err := http.ListenAndServe(":8080", handler)
+	if err != nil {
+		fmt.Println("Error starting server:", err)
+	}
+
 }

@@ -5,8 +5,9 @@ import Message from '../Message'
 function ChatHistory(props) {
 
     // 1. init the jsx
+    // chat history is just an array of strings
     const messages = props.chatHistory.map(
-        chatHist => <Message key={chatHist.timeStamp} message={chatHist.data} />
+        (chatHist, index) => <Message key={index} message={chatHist} />
     );
 
     return (

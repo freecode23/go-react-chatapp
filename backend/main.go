@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 
 	"github.com/freecode23/go-react-chatapp/pkg/cache"
 	"github.com/freecode23/go-react-chatapp/pkg/restUtil"
@@ -16,7 +15,7 @@ func main() {
 	redisCachePtr := cache.NewRedisStore()
 
 	// 3. init socket and rest API
-	socketUtil.SetupWebsocketRoutes(redisCachePtr)
+	go socketUtil.SetupWebsocketRoutes(redisCachePtr)
 	restUtil.SetupRestRoutes(redisCachePtr)
-	http.ListenAndServe(":9000", nil)
+
 }

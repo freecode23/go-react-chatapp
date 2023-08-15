@@ -4,11 +4,11 @@ import './Message.scss';
 
 
 function Message(props) {
-    const msg = JSON.parse(props.message);
+    const msg = props.message;
 
     return (
         <div className='Message'>
-            {msg.body}
+            {msg}
         </div>
     );
 }

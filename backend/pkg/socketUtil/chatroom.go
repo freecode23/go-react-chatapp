@@ -54,7 +54,7 @@ func (cr *chatroom) processChatroomEvents() {
 
 			// 1. insert client
 			cr.clientsMap[client] = true
-			fmt.Println("chatroom: size of connection:", len(cr.clientsMap))
+			fmt.Println("chatroom: new client reg:", len(cr.clientsMap))
 
 			for client := range cr.clientsMap {
 
@@ -70,7 +70,7 @@ func (cr *chatroom) processChatroomEvents() {
 
 			// delete client from this map
 			delete(cr.clientsMap, client)
-			fmt.Println("chatroom: size of connection:", len(cr.clientsMap))
+			fmt.Println("chatroom: client unreg:", len(cr.clientsMap))
 
 			// iterate and send message back
 			for client := range cr.clientsMap {

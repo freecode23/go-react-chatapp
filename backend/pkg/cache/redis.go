@@ -78,5 +78,6 @@ func (rs *RedisStore) GetLast30Messages() ([]message.Message, error) {
 	}
 
 	// 4. return list of message struct
+
 	return messages, nil
 }

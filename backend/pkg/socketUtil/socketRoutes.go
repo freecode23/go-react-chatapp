@@ -13,7 +13,6 @@ websocket chatroomis a struct from socketUtil package
 *
 */
 func handleNewClient(cr *chatroom, w http.ResponseWriter, r *http.Request) {
-	fmt.Println("websocket endpoint reached. serving")
 
 	// 1. upgrade http connection to web socket
 	conn, err := upgrade(w, r)
@@ -52,4 +51,11 @@ func SetupWebsocketRoutes(cacheIf cache.Cache) {
 
 	// 4. set up what to do on this route
 	http.HandleFunc("/start", websocketHandlerCallback)
+
+	// 5. serve
+	fmt.Println("Socketapi: Starting port 9000")
+	err := http.ListenAndServe(":9000", nil)
+	if err != nil {
+		fmt.Println("Error starting socket:", err)
+	}
 }

@@ -5,6 +5,8 @@ import ChatInput from './components/ChatInput';
 import Header from './components/Header';
 
 import {socketConnect, sendMsg} from './socketApi'
+import fetchChatHistory from './restApi';
+
 
 
 function App() {
@@ -15,11 +17,20 @@ function App() {
   // 2. connect socket
   useEffect(() => {
 
-    // pass in the callback function when you call connect
-    socketConnect((msg) => {
+    // - fetch all history
+    async function fetchData() {
+      const messages = await fetchChatHistory();
+      setChatHistory(messages);
+    }
+    fetchData();
 
-      // get message from sockets and add to history
-      setChatHistory(prevChatHistory => [...prevChatHistory, msg]);
+    // - connect to socket with call back function
+    socketConnect((msgEvent) => {
+
+      const jsonData = JSON.parse(msgEvent.data) // contains type and body
+
+      // get message from sockets and add to history if there's a new incoming message
+      setChatHistory(prevChatHistory => [...prevChatHistory, jsonData.body]);
 
     });
   }, []);
@@ -27,8 +38,8 @@ function App() {
   return (
     <div className="App">
       <Header/>
-      <ChatInput sendFunc={sendMsg}/>
       <ChatHistory chatHistory={chatHistory}/>
+      <ChatInput sendFunc={sendMsg}/>
     </div>
   );
 }

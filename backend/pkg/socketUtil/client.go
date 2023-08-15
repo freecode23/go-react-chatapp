@@ -46,7 +46,7 @@ func (c *client) listenMessages() {
 		// 3. write on channel
 		c.chatroom.messagesChan <- message
 
-		fmt.Printf("client: push %+v\n", message)
+		fmt.Printf("\nclient: push %+v\n", message)
 	}
 
 }
