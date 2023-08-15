@@ -86,10 +86,10 @@ func (cr *chatroom) processChatroomEvents() {
 		case msg := <-cr.messagesChan:
 			fmt.Println("chatroom: pop and broadcast:", msg.Body)
 
-			for client := range cr.clientsMap {
+			// 0. save to redis
+			cr.cache.SaveMessageToStore(msg)
 
-				// 0. save to redis
-				cr.cache.SaveMessageToStore(msg)
+			for client := range cr.clientsMap {
 
 				// 1. sends json message
 				err := client.wsConn.WriteJSON(msg)

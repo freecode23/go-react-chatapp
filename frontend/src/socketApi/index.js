@@ -3,7 +3,7 @@ var socket = new WebSocket('ws://localhost:9000/start')
 
 
 // init connect function
-let connect = (cb) => {
+let socketConnect = (cb) => {
     console.log("connecting")
 
 
@@ -35,4 +35,4 @@ let sendMsg = (msg) => {
     socket.send(msg)
 }
 
-export {connect, sendMsg}
+export {socketConnect, sendMsg}

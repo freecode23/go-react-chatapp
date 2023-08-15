@@ -4,7 +4,7 @@ import ChatHistory from './components/ChatHistory';
 import ChatInput from './components/ChatInput';
 import Header from './components/Header';
 
-import {connect, sendMsg} from './api'
+import {socketConnect, sendMsg} from './socketApi'
 
 
 function App() {
@@ -12,11 +12,11 @@ function App() {
   // 1. init chat history
   const [chatHistory, setChatHistory] = useState([]);
 
-  // 2. connect
+  // 2. connect socket
   useEffect(() => {
 
     // pass in the callback function when you call connect
-    connect((msg) => {
+    socketConnect((msg) => {
 
       // get message from sockets and add to history
       setChatHistory(prevChatHistory => [...prevChatHistory, msg]);
