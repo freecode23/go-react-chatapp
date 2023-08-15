@@ -14,10 +14,13 @@ function App() {
 
   // 2. connect
   useEffect(() => {
+
+    // pass in the callback function when you call connect
     connect((msg) => {
 
       // get message from sockets and add to history
       setChatHistory(prevChatHistory => [...prevChatHistory, msg]);
+
     });
   }, []);
 
