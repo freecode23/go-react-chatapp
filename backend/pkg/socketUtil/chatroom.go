@@ -74,7 +74,7 @@ func (cr *chatroom) processChatroomEvents() {
 
 			// iterate and send message back
 			for client := range cr.clientsMap {
-				fmt.Println(client)
+
 				client.wsConn.WriteJSON(message.Message{
 					Type: 1,
 					Body: "User Disconnected...",
@@ -83,16 +83,16 @@ func (cr *chatroom) processChatroomEvents() {
 			break
 
 		// case3. pop the message that's just received
-		case msg := <-cr.messagesChan:
-			fmt.Println("chatroom: pop and broadcast:", msg.Body)
+		case msgObj := <-cr.messagesChan:
+			fmt.Println("chatroom: pop and broadcast:", msgObj)
 
 			// 0. save to redis
-			cr.cache.SaveMessageToStore(msg)
+			cr.cache.SaveMessageToStore(msgObj)
 
 			for client := range cr.clientsMap {
 
 				// 1. sends json message
-				err := client.wsConn.WriteJSON(msg)
+				err := client.wsConn.WriteJSON(msgObj)
 
 				// 2. handle error
 				if err != nil {

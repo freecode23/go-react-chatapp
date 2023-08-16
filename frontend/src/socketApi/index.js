@@ -32,7 +32,7 @@ let socketConnect = (cb) => {
 
 let sendMsg = (msg) => {
     console.log("socket sending message:",msg)
-    socket.send(msg)
+    socket.send(JSON.stringify(msg));
 }
 
 export {socketConnect, sendMsg}

@@ -1,7 +1,8 @@
 .ChatHistory {
-
-    margin:0;
-    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    margin: 100px 20px;
+    padding: 10px;
 
     h2{
         margin:0;

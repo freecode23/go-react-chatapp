@@ -1,14 +1,16 @@
-
-import React from 'react';
+import React, { useContext } from 'react'; // Make sure to import useContext
 import './Message.scss';
-
+import UserContext from '../../utils/UserContext';
 
 function Message(props) {
-    const msg = props.message;
+    const currUserName = useContext(UserContext);
+    const isMessageFromCurrentUser = props.userName === currUserName;
+    const messageClass = isMessageFromCurrentUser ? 'currentUser' : 'otherUser';
 
     return (
-        <div className='Message'>
-            {msg}
+        <div className={`Message ${messageClass}`}>
+            <div className='userName'>{props.userName}</div> 
+            <div className='message'>{props.message}</div>
         </div>
     );
 }

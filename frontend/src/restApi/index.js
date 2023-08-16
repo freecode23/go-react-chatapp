@@ -5,9 +5,15 @@ const BASE_URL = 'http://localhost:8080';
 async function fetchChatHistory() {
     try {
         const response = await axios.get(`${BASE_URL}/chatHistory`);
-        
-        // Assuming the response data is an array as inferred from the original code
-        return response.data.map(item => item.body);
+
+        // return a list of json object of {
+            // body: item.body, 
+            // userName: item.userName
+        // }
+        return response.data.map(item => ({
+            body: item.body,
+            userName: item.userName
+        }));
     } catch (error) {
         console.error('Failed to fetch chat history:', error);
     }

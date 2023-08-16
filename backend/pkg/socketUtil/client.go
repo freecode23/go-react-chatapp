@@ -1,6 +1,7 @@
 package socketUtil
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"sync"
@@ -34,19 +35,29 @@ func (c *client) listenMessages() {
 	for {
 
 		// 1. get the json message
-		messageType, p, err := c.wsConn.ReadMessage()
+		messageType, jsonBytes, err := c.wsConn.ReadMessage()
 		if err != nil {
 			log.Println(err)
 			return
 
 		}
-		// 2. create the mssage
-		message := message.Message{Type: messageType, Body: string(p)}
 
-		// 3. write on channel
-		c.chatroom.messagesChan <- message
+		// 2. init var to store the message
+		var msg message.Message
 
-		fmt.Printf("\nclient: push %+v\n", message)
+		// 3. handle error
+		if err := json.Unmarshal(jsonBytes, &msg); err != nil {
+			log.Println("Failed to unmarshal:", err)
+			continue // Skip this iteration and go to next
+		}
+
+		// 4. assign type
+		msg.Type = messageType
+
+		// 5. write on channel
+		c.chatroom.messagesChan <- msg
+
+		fmt.Println("\nclient: push msg username:", msg.UserName, "body:", msg.Body)
 	}
 
 }

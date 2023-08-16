@@ -3,43 +3,57 @@ import React, { useState, useEffect } from 'react';
 import ChatHistory from './components/ChatHistory';
 import ChatInput from './components/ChatInput';
 import Header from './components/Header';
+import UserContext from './utils/UserContext';
 
 import {socketConnect, sendMsg} from './socketApi'
 import fetchChatHistory from './restApi';
-
+import generator from './utils/UniqueNameGenerator'
 
 
 function App() {
 
+  // 0. init random name for this user 
+  const [userName] = useState(generator.generateUniqueName());
+
   // 1. init chat history
+  // an array of {userName: "sherly45", body: "hello"}
   const [chatHistory, setChatHistory] = useState([]);
 
-  // 2. connect socket
+  // 2. every render
   useEffect(() => {
 
-    // - fetch all history
+    // 1.  fetch all history
     async function fetchData() {
-      const messages = await fetchChatHistory();
-      setChatHistory(messages);
+      const messageObj = await fetchChatHistory();
+      setChatHistory(messageObj.reverse());
     }
     fetchData();
 
-    // - connect to socket with call back function
+    // 2. connect to socket with call back function
+    // that adds message to chat history everytime theres a new message received
+    // from any other clients
     socketConnect((msgEvent) => {
 
-      const jsonData = JSON.parse(msgEvent.data) // contains type and body
+      // contains body and userName and type
+      const jsonData = JSON.parse(msgEvent.data) 
 
       // get message from sockets and add to history if there's a new incoming message
-      setChatHistory(prevChatHistory => [...prevChatHistory, jsonData.body]);
+      const chatUserBody = {
+        userName: jsonData.userName,
+        body: jsonData.body
+      }
+      setChatHistory(prevChatHistory => [...prevChatHistory, chatUserBody]);
 
     });
   }, []);
 
   return (
     <div className="App">
+      <UserContext.Provider value={userName}>
       <Header/>
       <ChatHistory chatHistory={chatHistory}/>
       <ChatInput sendFunc={sendMsg}/>
+      </UserContext.Provider>
     </div>
   );
 }
