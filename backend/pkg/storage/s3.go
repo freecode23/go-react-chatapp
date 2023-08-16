@@ -39,8 +39,6 @@ func SaveChatHistory(chatHistory *redis.StringSliceCmd) error {
 		return err
 	}
 
-	fmt.Println("s3: saving to s3", string(chatHistoryJSONBytes))
-
 	// 2. init session
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(region),

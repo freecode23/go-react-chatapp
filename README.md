@@ -6,13 +6,23 @@ node v20.5.1
 npm v9.8.0  
 
 
+# Infrastructure
+0. cd into infrastucture folder
+1. Have aws cli and terraform installed
+2. ```aws configure```
+3. Enter Access key and Secret Access key
+4. terraform init
+5. terraform plan
+6. apply
+
+
+
 # Backend
-redis installed
-go get -u github.com/gorilla/mux
-go get -u github.com/gorilla/websocket
-go get github.com/rs/cors
-go mod init 
-go mod tidy
+0. cd into backend/ folder
+1. Have redis installed
+2. ```go mod init``` 
+3. ```go mod tidy```
+
 
 ## To start backend: 
 Step 1: start redis server
