@@ -86,7 +86,10 @@ func (cr *chatroom) processChatroomEvents() {
 		case msgObj := <-cr.messagesChan:
 			fmt.Println("chatroom: pop and broadcast:", msgObj)
 
-			// 0. save to redis
+			// 0. upload all messages To S3 if redis is full
+			cr.cache.UploadMessagesToS3()
+
+			// 1. save to redis
 			cr.cache.SaveMessageToStore(msgObj)
 
 			for client := range cr.clientsMap {
