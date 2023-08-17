@@ -1,7 +1,6 @@
 package socketUtil
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"sync"
@@ -24,8 +23,7 @@ Get client's message and broadcast to chatroom's broadcast channel
 */
 func (c *client) listenMessages() {
 
-	//1.  will only be executed if theres error
-	// or if client exits
+	//1.  will unregister if theres error or if client exit
 	defer func() {
 		c.chatroom.unregisteredClientsChan <- c
 		c.wsConn.Close()
@@ -35,29 +33,24 @@ func (c *client) listenMessages() {
 	for {
 
 		// 1. get the json message
-		messageType, jsonBytes, err := c.wsConn.ReadMessage()
+		_, jsonBytes, err := c.wsConn.ReadMessage()
 		if err != nil {
 			log.Println(err)
 			return
 
 		}
 
-		// 2. init var to store the message
-		var msg message.Message
-
-		// 3. handle error
-		if err := json.Unmarshal(jsonBytes, &msg); err != nil {
-			log.Println("Failed to unmarshal:", err)
-			continue // Skip this iteration and go to next
+		// 2. convert msg JsonBYtes to msgStruct Pointer
+		msgStructPtr, err := message.NewMessageFromJSON(jsonBytes)
+		if err != nil {
+			log.Println("Failed to create message:", err)
+			continue
 		}
 
-		// 4. assign type
-		msg.Type = messageType
-
 		// 5. write on channel
-		c.chatroom.messagesChan <- msg
+		c.chatroom.messagesChan <- *msgStructPtr
 
-		fmt.Println("\nclient: push msg username:", msg.UserName, "body:", msg.Body)
+		fmt.Println("\nclient: push msg username:", msgStructPtr.UserName, "body:", msgStructPtr.Body)
 	}
 
 }
