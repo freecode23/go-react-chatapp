@@ -36,7 +36,7 @@ func handleNewClient(cr *chatroom, w http.ResponseWriter, r *http.Request) {
 
 func SetupWebsocketRoutes(cacheIf cache.Cache) {
 
-	// 1. init chatroom/ chatroom
+	// 1. init chatroom
 	chatroomPtr := newChatroom(cacheIf)
 
 	// 2. go routine thread

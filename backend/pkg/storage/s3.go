@@ -9,7 +9,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/go-redis/redis/v8"
 )
 
 var region string = "us-east-2"
@@ -25,16 +24,11 @@ func getCurrentTime() string {
 	return currentTime.Format("15:04:05") // HH-mm-ss format
 }
 
-func SaveChatHistory(chatHistory *redis.StringSliceCmd) error {
+func SaveChatHistory(chatHistoryStr []string) error {
 
-	// 1. Convert chatHistory to string
-	chatStrings, err := chatHistory.Result()
-	if err != nil {
-		return err
-	}
-
+	fmt.Println("save chat hist:", chatHistoryStr)
 	// Convert the slice of strings to a single JSON string
-	chatHistoryJSONBytes, err := json.Marshal(chatStrings)
+	chatHistoryJSONBytes, err := json.Marshal(chatHistoryStr)
 	if err != nil {
 		return err
 	}

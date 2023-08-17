@@ -3,7 +3,7 @@ package cache
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"log"
 
 	"github.com/freecode23/go-react-chatapp/pkg/message"
 	"github.com/freecode23/go-react-chatapp/pkg/storage"
@@ -90,25 +90,27 @@ func (rs *RedisStore) UploadMessagesToS3() {
 	// 0. get current redis chatHistory length
 	length, err := rs.redisClient.LLen(rs.ctx, "chatHistory").Result()
 	if err != nil {
-		panic(err)
+		log.Printf("redis: Failed to get chatHistory length: %v", err)
 	}
 
 	// 1. if its already full, save to s3
 	if length >= threshold {
 
-		// Retrieve 10 messages
+		// 1. Retrieve 10 messages
 		chatHistory10 := rs.redisClient.LRange(rs.ctx, "chatHistory", 0, threshold-1)
 
-		// Push to S3
-		storage.SaveChatHistory(chatHistory10)
-
-		// If the upload is successful, remove all messages from Redis
-		rs.redisClient.Del(rs.ctx, "chatHistory")
-
-		length, err := rs.redisClient.LLen(rs.ctx, "chatHistory").Result()
-		fmt.Println("redis:after delete length redis=", length)
+		// 2. Convert chatHistory to string
+		chatHistory10Str, err := chatHistory10.Result()
 		if err != nil {
-			panic(err)
+			log.Printf("redis:Failed to get 10 chatHistory: %v", err)
+		}
+		// 3. Push to S3
+		storage.SaveChatHistory(chatHistory10Str)
+
+		// 4. If the upload is successful, remove all messages from Redis
+		rs.redisClient.Del(rs.ctx, "chatHistory")
+		if err != nil {
+			log.Printf("redis: Failed to delete chatHistory: %v", err)
 		}
 	}
 }
