@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 
@@ -43,7 +44,7 @@ func createChatHistoryIndex() *redisearch.Client {
 		AddField(redisearch.NewTextField("room")).
 		AddField(redisearch.NewTextField("user")).
 		AddField(redisearch.NewTextFieldOptions("body", redisearch.TextFieldOptions{Weight: 5.0})).
-		AddField(redisearch.NewTextFieldOptions("timestamp", redisearch.TextFieldOptions{Sortable: true}))
+		AddField(redisearch.NewNumericFieldOptions("timestamp", redisearch.NumericFieldOptions{Sortable: true}))
 
 	// 5. Create the index with the given schema
 	if err := rediSearchClient.CreateIndex(sc); err != nil {
@@ -90,7 +91,6 @@ func (rs *RedisStore) SaveMessageToStore(msgStruct message.Message) error {
 	// 2. create key for the json object
 	key := msgStruct.ID
 	msgStruct.RoomName = "roomX"
-	fmt.Println("redis: adding redisJSON:", string(msgJSONbytes))
 
 	// 3. Insert the message into Redis using RedisJSON
 	_, err = rs.rejsonHandler.JSONSet(key, ".", msgJSONbytes)
@@ -98,15 +98,14 @@ func (rs *RedisStore) SaveMessageToStore(msgStruct message.Message) error {
 		fmt.Println("redis: cannot insert key and message to json")
 		return err
 	}
-	fmt.Printf("Type of msg.ID: %T, Value: %v\n", key, key)
 
 	// 4. create a doc of this msgStruct for redisearch
-	// "541db2fe09134bd0850ce31b69d0bbe9"
+	timestampEpoch := msgStruct.Timestamp.Unix()
 	docMessage := redisearch.NewDocument("id"+key, 1).
 		Set("room", msgStruct.RoomName).
 		Set("user", msgStruct.UserName).
 		Set("body", msgStruct.Body).
-		Set("timestamp", msgStruct.Timestamp.Format(time.RFC3339))
+		Set("timestamp", timestampEpoch)
 
 	// 5. Index the document:
 	// meaning it will be stored in such a way that you can quickly search for it based on its content.
@@ -119,12 +118,22 @@ func (rs *RedisStore) SaveMessageToStore(msgStruct message.Message) error {
 	return nil
 }
 
-func (rs *RedisStore) GetLast10Messages() ([]message.Message, error) {
+func convertStringSecToTimeStamp(secondsStr string) time.Time {
+	secondsInt, _ := strconv.ParseInt(secondsStr, 10, 64)
+
+	timestamp := time.Unix(secondsInt, 0)
+	return timestamp
+}
+
+func (rs *RedisStore) GetLastMessagesStruct() ([]message.Message, error) {
 
 	// 1. Create a query for the last 10 messages based on timestamp.
 	// Create a sorting key
-	q := redisearch.NewQuery("*").SetSortBy("timestamp", false). // Order by timestamp descending.
-									Limit(0, 10)
+	// q := redisearch.NewQuery("*").SetSortBy("timestamp", false). // Order by timestamp descending.
+	// 								Limit(0, 10)
+	// 1. Create a query for all messages from the given room, based on the room name.
+	q := redisearch.NewQuery(fmt.Sprintf("@room:'%s'", "roomX")).
+		SetSortBy("timestamp", false) // Order by timestamp descending.
 
 	// 2. Execute the query
 	docs, _, _ := rs.rediSearchClient.Search(q)
@@ -132,25 +141,46 @@ func (rs *RedisStore) GetLast10Messages() ([]message.Message, error) {
 	// 3. Convert the search results to message.Message objects.
 	messagesOut := make([]message.Message, 0, len(docs))
 	for _, doc := range docs {
-		fmt.Println("redis:doc", doc)
+
+		// - convert to time format
+		timestamp := convertStringSecToTimeStamp(doc.Properties["timestamp"].(string))
+
+		// - init message struct
 		msg := message.Message{
-			ID:        doc.Id[strings.Index(doc.Id, ":")+1:], // Assuming doc.Id is "message:<ID>"
-			UserName:  doc.Properties["user"].(string),
+			ID:        doc.Id[strings.Index(doc.Id, "d")+1:], // get the numeric part of the id
 			RoomName:  doc.Properties["room"].(string),
+			UserName:  doc.Properties["user"].(string),
 			Body:      doc.Properties["body"].(string),
-			Timestamp: doc.Properties["timestamp"].(time.Time), // Assuming timestamp is stored as time.Time
+			Timestamp: timestamp,
 		}
+
+		// - add to list
 		messagesOut = append(messagesOut, msg)
 	}
 
 	return messagesOut, nil
 }
 
+func (rs *RedisStore) countMessagesInRoom(roomName string) (int, error) {
+
+	agg := redisearch.NewAggregateQuery().
+		Load([]string{"room"}). // Note: Do not use "@" here, as it's used for referencing, not loading
+		Filter("@room=='roomX'")
+
+	_, total, err := rs.rediSearchClient.Aggregate(agg)
+	if err != nil {
+		fmt.Println("redis: error cannot get total:", err)
+		return 0, err
+	}
+
+	return total, nil
+}
+
 func (rs *RedisStore) UploadMessagesToS3() {
 	const threshold = 10
 
 	// 0. get current redis chatHistory length
-	length, err := rs.redisClient.LLen(rs.ctx, "chatHistory").Result()
+	length, err := rs.countMessagesInRoom("roomX")
 	if err != nil {
 		log.Printf("redis: Failed to get chatHistory length: %v", err)
 	}
@@ -158,11 +188,19 @@ func (rs *RedisStore) UploadMessagesToS3() {
 	// 1. if its already full, save to s3
 	if length >= threshold {
 
-		// 1. Retrieve 10 messages
-		chatHistory10 := rs.redisClient.LRange(rs.ctx, "chatHistory", 0, threshold-1)
+		// 1. Retrieve 10 messages - using
+		chatHistory10Struct, _ := rs.GetLastMessagesStruct()
 
 		// 2. Convert chatHistory to string
-		chatHistory10Str, err := chatHistory10.Result()
+		var chatHistory10Str []string
+		for _, msgStruct := range chatHistory10Struct {
+			jsonByte, err := json.Marshal(msgStruct)
+			if err != nil {
+				log.Printf("redis: failed to marshal chatHistory10Str to JSON")
+			}
+			chatHistory10Str = append(chatHistory10Str, string(jsonByte))
+		}
+
 		if err != nil {
 			log.Printf("redis:Failed to get 10 chatHistory: %v", err)
 		}
@@ -170,7 +208,7 @@ func (rs *RedisStore) UploadMessagesToS3() {
 		storage.SaveChatHistory(chatHistory10Str)
 
 		// 4. If the upload is successful, remove all messages from Redis
-		rs.redisClient.Del(rs.ctx, "chatHistory")
+		// TODO: REMOVE ALL MESSAGES OF THIS ROOM from REDIS
 		if err != nil {
 			log.Printf("redis: Failed to delete chatHistory: %v", err)
 		}

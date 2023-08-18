@@ -87,7 +87,7 @@ func (cr *chatroom) processChatroomEvents() {
 			fmt.Println("chatroom: pop and broadcast:", msgObj)
 
 			// 0. upload all messages To S3 if redis is full
-			// cr.cache.UploadMessagesToS3()
+			cr.cache.UploadMessagesToS3()
 
 			// 1. save to redis
 			cr.cache.SaveMessageToStore(msgObj)

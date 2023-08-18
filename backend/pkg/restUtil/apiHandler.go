@@ -14,7 +14,8 @@ type apiHandler struct {
 func (a *apiHandler) getChatHistory(w http.ResponseWriter, r *http.Request) {
 
 	// 1. Fetch the last 30 messages
-	messagesStruct, err := a.Cache.GetLast10Messages()
+	messagesStruct, err := a.Cache.GetLastMessagesStruct()
+
 	if err != nil {
 		http.Error(w, "Failed to fetch chat history", http.StatusInternalServerError)
 		return

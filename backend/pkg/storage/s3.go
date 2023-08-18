@@ -26,7 +26,7 @@ func getCurrentTime() string {
 
 func SaveChatHistory(chatHistoryStr []string) error {
 
-	fmt.Println("save chat hist:", chatHistoryStr)
+	fmt.Println("s3:save chat hist:", chatHistoryStr)
 	// Convert the slice of strings to a single JSON string
 	chatHistoryJSONBytes, err := json.Marshal(chatHistoryStr)
 	if err != nil {
