@@ -5,19 +5,20 @@ import (
 	"net/http"
 
 	"github.com/freecode23/go-react-chatapp/pkg/cache"
+	"github.com/freecode23/go-react-chatapp/pkg/chat"
 	"github.com/gorilla/mux"
 )
 
-var chatroomsMap = make(map[string]*Chatroom)
+var chatroomsMap = make(map[string]*chat.Chatroom)
 
-func getOrCreateChatroom(cacheObj cache.Cache, chatroomName string) *Chatroom {
+func getOrCreateChatroom(cacheObj cache.Cache, chatroomName string) *chat.Chatroom {
 	// 1. return existing chatroom if exist
 	if chatroom, exists := chatroomsMap[chatroomName]; exists {
 		return chatroom
 	}
 
 	// 2. return new chatroom otherwise
-	return newChatroom(cacheObj, chatroomName)
+	return chat.NewChatroom(cacheObj, chatroomName)
 }
 
 /*
@@ -32,7 +33,6 @@ func getOrCreateChatroom(cacheObj cache.Cache, chatroomName string) *Chatroom {
 */
 func handleNewClient(cacheIf cache.Cache, w http.ResponseWriter, r *http.Request) {
 
-	fmt.Println("handling new client")
 	// 0. Create or get chatroom for this client
 	// - Extract chatroom name from the URL
 	vars := mux.Vars(r)
@@ -48,7 +48,7 @@ func handleNewClient(cacheIf cache.Cache, w http.ResponseWriter, r *http.Request
 	// 1. go routine thread
 	// set up a single chatroom in the background
 	// will run concurrently without blocking the main thread.
-	go chatroomPtr.processChatroomEvents()
+	go chatroomPtr.ProcessChatroomEvents()
 
 	// 2. upgrade http connection to web socket
 	conn, err := upgrade(w, r)
@@ -57,16 +57,16 @@ func handleNewClient(cacheIf cache.Cache, w http.ResponseWriter, r *http.Request
 	}
 
 	// 3. create a client pointer
-	clientPtr := &client{
-		wsConn:   conn,
-		chatroom: chatroomPtr,
+	clientPtr := &chat.Client{
+		WsConn:   conn,
+		Chatroom: chatroomPtr,
 	}
 
 	// - add clientPtr to the chatroom's Register
-	chatroomPtr.registeredClientsChan <- clientPtr
+	chatroomPtr.RegisteredClientsChan <- clientPtr
 
 	// 4. read messages from client and broadcast them (infinite loop)
-	clientPtr.listenMessages()
+	clientPtr.ListenMessages()
 	fmt.Println("socketRoutes: currentRooms", chatroomsMap)
 }
 

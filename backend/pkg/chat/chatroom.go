@@ -1,4 +1,4 @@
-package socketUtil
+package chat
 
 import (
 	"fmt"
@@ -9,9 +9,9 @@ import (
 
 type Chatroom struct {
 	chatroomName            string
-	registeredClientsChan   chan *client
-	unregisteredClientsChan chan *client
-	clientsMap              map[*client]bool // key client, value bool. made up set like in python
+	RegisteredClientsChan   chan *Client
+	unregisteredClientsChan chan *Client
+	clientsMap              map[*Client]bool // key client, value bool. made up set like in python
 	messagesChan            chan message.Message
 	cache                   cache.Cache
 }
@@ -23,14 +23,14 @@ Think of this as a single chat room
 Return reference to a new Chatroom
 *
 */
-func newChatroom(cacheObj cache.Cache, chatroomName string) *Chatroom {
+func NewChatroom(cacheObj cache.Cache, chatroomName string) *Chatroom {
 
 	// return chatroom struct
 	return &Chatroom{
 		chatroomName:            chatroomName,
-		registeredClientsChan:   make(chan *client),
-		unregisteredClientsChan: make(chan *client),
-		clientsMap:              make(map[*client]bool),
+		RegisteredClientsChan:   make(chan *Client),
+		unregisteredClientsChan: make(chan *Client),
+		clientsMap:              make(map[*Client]bool),
 		messagesChan:            make(chan message.Message),
 		cache:                   cacheObj,
 	}
@@ -45,7 +45,7 @@ This is done continuously. as long as there is a client
 coming in, go routine will do something
 *
 */
-func (cr *Chatroom) processChatroomEvents() {
+func (cr *Chatroom) ProcessChatroomEvents() {
 
 	for {
 		select {
@@ -53,7 +53,7 @@ func (cr *Chatroom) processChatroomEvents() {
 		// case1: read the client that register
 		// client here looks like this: memory address &{ 0x140001542c0 0x1400006e0e0 <nil>}
 		// does not print out the actual values stored in pointers
-		case client := <-cr.registeredClientsChan:
+		case client := <-cr.RegisteredClientsChan:
 
 			// 1. insert client
 			cr.clientsMap[client] = true
@@ -61,7 +61,7 @@ func (cr *Chatroom) processChatroomEvents() {
 
 			for client := range cr.clientsMap {
 
-				client.wsConn.WriteJSON(message.Message{
+				client.WsConn.WriteJSON(message.Message{
 
 					Body: "New User Joined...",
 				})
@@ -78,7 +78,7 @@ func (cr *Chatroom) processChatroomEvents() {
 			// iterate and send message back
 			for client := range cr.clientsMap {
 
-				client.wsConn.WriteJSON(message.Message{
+				client.WsConn.WriteJSON(message.Message{
 
 					Body: "User Disconnected...",
 				})
@@ -98,7 +98,7 @@ func (cr *Chatroom) processChatroomEvents() {
 			for client := range cr.clientsMap {
 
 				// 1. sends json message
-				err := client.wsConn.WriteJSON(msgObj)
+				err := client.WsConn.WriteJSON(msgObj)
 
 				// 2. handle error
 				if err != nil {

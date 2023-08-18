@@ -1,4 +1,4 @@
-package socketUtil
+package chat
 
 import (
 	"log"
@@ -8,10 +8,10 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-type client struct {
+type Client struct {
 	ID       string
-	wsConn   *websocket.Conn
-	chatroom *Chatroom
+	WsConn   *websocket.Conn
+	Chatroom *Chatroom
 	mu       *sync.Mutex
 }
 
@@ -20,19 +20,19 @@ type client struct {
 Get client's message and broadcast to chatroom's broadcast channel
 *
 */
-func (c *client) listenMessages() {
+func (c *Client) ListenMessages() {
 
 	//1.  will unregister if theres error or if client exit
 	defer func() {
-		c.chatroom.unregisteredClientsChan <- c
-		c.wsConn.Close()
+		c.Chatroom.unregisteredClientsChan <- c
+		c.WsConn.Close()
 	}()
 
 	// 2. infinite loop keep reading until client quits
 	for {
 
 		// 1. get the json message
-		_, jsonBytes, err := c.wsConn.ReadMessage()
+		_, jsonBytes, err := c.WsConn.ReadMessage()
 		if err != nil {
 			log.Println(err)
 			return
@@ -47,7 +47,7 @@ func (c *client) listenMessages() {
 		}
 
 		// 5. write on channel
-		c.chatroom.messagesChan <- *msgStructPtr
+		c.Chatroom.messagesChan <- *msgStructPtr
 		// fmt.Printf("\nclient: push msgStructPtr:%v\n", msgStructPtr)
 	}
 
