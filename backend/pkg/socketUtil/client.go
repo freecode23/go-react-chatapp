@@ -11,7 +11,7 @@ import (
 type client struct {
 	ID       string
 	wsConn   *websocket.Conn
-	chatroom *chatroom
+	chatroom *Chatroom
 	mu       *sync.Mutex
 }
 

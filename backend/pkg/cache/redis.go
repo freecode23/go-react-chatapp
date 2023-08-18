@@ -45,6 +45,7 @@ func NewRedisStore() *RedisStore {
 
 /*
 *
+1. redisJson add
 Save message to redis store as JSON
 method is always implemented on the concrete type
 *
@@ -85,6 +86,11 @@ func (rs *RedisStore) SaveMessageToStore(msgStruct message.Message) error {
 	return nil
 }
 
+/*
+*
+2. redisJson get
+*
+*/
 func (rs *RedisStore) GetLastMessagesStruct(roomName string) ([]message.Message, error) {
 
 	// 1. Create a query to retrieve all messages based on the room name.
@@ -117,6 +123,11 @@ func (rs *RedisStore) GetLastMessagesStruct(roomName string) ([]message.Message,
 	return messagesOut, nil
 }
 
+/*
+*
+3. redisJson delete
+*
+*/
 func (rs *RedisStore) UploadMessagesToS3(roomName string) {
 	const threshold = 10
 
@@ -201,7 +212,7 @@ func (rs *RedisStore) countMessagesInRoom(roomName string) (int, error) {
 
 	agg := redisearch.NewAggregateQuery().
 		Load([]string{"room"}). // Note: Do not use "@" here, as it's used for referencing, not loading
-		Filter("@room=='roomX'")
+		Filter(fmt.Sprintf("@room=='%s'", roomName))
 
 	_, total, err := rs.rediSearchClient.Aggregate(agg)
 	if err != nil {

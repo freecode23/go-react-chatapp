@@ -7,7 +7,8 @@ import (
 	"github.com/freecode23/go-react-chatapp/pkg/message"
 )
 
-type chatroom struct {
+type Chatroom struct {
+	chatroomName            string
 	registeredClientsChan   chan *client
 	unregisteredClientsChan chan *client
 	clientsMap              map[*client]bool // key client, value bool. made up set like in python
@@ -22,9 +23,11 @@ Think of this as a single chat room
 Return reference to a new Chatroom
 *
 */
-func newChatroom(cacheObj cache.Cache) *chatroom {
+func newChatroom(cacheObj cache.Cache, chatroomName string) *Chatroom {
 
-	return &chatroom{
+	// return chatroom struct
+	return &Chatroom{
+		chatroomName:            chatroomName,
 		registeredClientsChan:   make(chan *client),
 		unregisteredClientsChan: make(chan *client),
 		clientsMap:              make(map[*client]bool),
@@ -42,7 +45,7 @@ This is done continuously. as long as there is a client
 coming in, go routine will do something
 *
 */
-func (cr *chatroom) processChatroomEvents() {
+func (cr *Chatroom) processChatroomEvents() {
 
 	for {
 		select {

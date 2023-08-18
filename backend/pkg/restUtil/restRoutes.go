@@ -30,9 +30,6 @@ func SetupRestRoutes(cacheIf cache.Cache) {
 	// 3. Use the CORS middleware for your router
 	handler := cors.Default().Handler(muxRouter)
 
-	// 4. make muxRouter handle requests to the root path
-	http.Handle("/", muxRouter)
-
 	fmt.Println("Restapi: Starting port 8080")
 	err := http.ListenAndServe(":8080", handler)
 	if err != nil {

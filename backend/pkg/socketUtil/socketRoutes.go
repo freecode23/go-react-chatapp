@@ -5,56 +5,85 @@ import (
 	"net/http"
 
 	"github.com/freecode23/go-react-chatapp/pkg/cache"
+	"github.com/gorilla/mux"
 )
+
+var chatroomsMap = make(map[string]*Chatroom)
+
+func getOrCreateChatroom(cacheObj cache.Cache, chatroomName string) *Chatroom {
+	// 1. return existing chatroom if exist
+	if chatroom, exists := chatroomsMap[chatroomName]; exists {
+		return chatroom
+	}
+
+	// 2. return new chatroom otherwise
+	return newChatroom(cacheObj, chatroomName)
+}
 
 /*
 *
-websocket chatroomis a struct from socketUtil package
+ 1. 0 Create or get chatroom for this client
+    1 init go routine thread
+    2 Create websocketconnection
+    3 Create the client and add to registered client channel
+    4 listening to this client connection
+
 *
 */
-func handleNewClient(cr *chatroom, w http.ResponseWriter, r *http.Request) {
+func handleNewClient(cacheIf cache.Cache, w http.ResponseWriter, r *http.Request) {
 
-	// 1. upgrade http connection to web socket
-	conn, err := upgrade(w, r)
-
-	if err != nil {
-		fmt.Fprintf(w, "%+v\n", err)
+	fmt.Println("handling new client")
+	// 0. Create or get chatroom for this client
+	// - Extract chatroom name from the URL
+	vars := mux.Vars(r)
+	chatroomName, exists := vars["chatroomName"]
+	if !exists {
+		http.Error(w, "Chatroom not specified", http.StatusBadRequest)
+		return
 	}
 
-	// 2. create a client pointer
-	clientPtr := &client{
-		wsConn:   conn,
-		chatroom: cr,
-	}
+	// - check if chatroom already exist in map, if not create a new one
+	chatroomPtr := getOrCreateChatroom(cacheIf, chatroomName)
 
-	// 3. add clientPtr to the chatroom's Register
-	cr.registeredClientsChan <- clientPtr
-
-	// 4. read messages from client and broadcast them (infinite loop)
-	clientPtr.listenMessages()
-}
-
-func SetupWebsocketRoutes(cacheIf cache.Cache) {
-
-	// 1. init chatroom
-	chatroomPtr := newChatroom(cacheIf)
-
-	// 2. go routine thread
+	// 1. go routine thread
 	// set up a single chatroom in the background
 	// will run concurrently without blocking the main thread.
 	go chatroomPtr.processChatroomEvents()
 
-	// 3. Define the callback function when client calls
-	websocketHandlerCallback := func(w http.ResponseWriter, r *http.Request) {
-		handleNewClient(chatroomPtr, w, r)
+	// 2. upgrade http connection to web socket
+	conn, err := upgrade(w, r)
+	if err != nil {
+		fmt.Fprintf(w, "%+v\n", err)
 	}
 
-	// 4. set up what to do on this route
-	http.HandleFunc("/start", websocketHandlerCallback)
+	// 3. create a client pointer
+	clientPtr := &client{
+		wsConn:   conn,
+		chatroom: chatroomPtr,
+	}
 
-	// 5. serve
+	// - add clientPtr to the chatroom's Register
+	chatroomPtr.registeredClientsChan <- clientPtr
+
+	// 4. read messages from client and broadcast them (infinite loop)
+	clientPtr.listenMessages()
+	fmt.Println("socketRoutes: currentRooms", chatroomsMap)
+}
+
+func SetupWebsocketRoutes(cacheIf cache.Cache) {
+	mRouter := mux.NewRouter()
+
+	// 1. Define the callback function when client calls
+	websocketHandlerCallback := func(w http.ResponseWriter, r *http.Request) {
+		handleNewClient(cacheIf, w, r)
+	}
+
+	// 2. set up what to do on this route
+	mRouter.HandleFunc("/start/{chatroomName}", websocketHandlerCallback)
+
+	// 3. serve
 	fmt.Println("Socketapi: Starting port 9000")
-	err := http.ListenAndServe(":9000", nil)
+	err := http.ListenAndServe(":9000", mRouter)
 	if err != nil {
 		fmt.Println("Error starting socket:", err)
 	}
