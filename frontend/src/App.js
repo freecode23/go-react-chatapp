@@ -13,9 +13,12 @@ import generator from './utils/UniqueNameGenerator'
 function App() {
 
   // 0. init random name for this user 
-  const [userName] = useState(generator.generateUniqueName());
+  const [userValues, setUserValues] = useState({
+    userName: generator.generateUniqueName(),
+    roomName: "roomX"
+  });
 
-  // 1. init chat history
+  // 1. init chat history of this room
   const [chatHistory, setChatHistory] = useState([]);
 
   // 2. every render
@@ -23,7 +26,7 @@ function App() {
 
     // 1.  fetch all history
     async function fetchData() {
-      const messageObj = await fetchChatHistory();
+      const messageObj = await fetchChatHistory(userValues.roomName);
       setChatHistory(messageObj.reverse());
     }
     fetchData();
@@ -38,8 +41,9 @@ function App() {
 
       // get message from sockets and add to history if there's a new incoming message
       const chatUserBody = {
+        roomName: jsonData.roomName,
         userName: jsonData.userName,
-        body: jsonData.body
+        body: jsonData.body,
       }
       setChatHistory(prevChatHistory => [...prevChatHistory, chatUserBody]);
 
@@ -48,7 +52,7 @@ function App() {
 
   return (
     <div className="App">
-      <UserContext.Provider value={userName}>
+      <UserContext.Provider value={userValues}>
       <Header/>
       <ChatHistory chatHistory={chatHistory}/>
       <ChatInput sendFunc={sendMsg}/>

@@ -3,7 +3,9 @@ import UserContext from '../../utils/UserContext';
 import './ChatInput.scss';
 
 function ChatInput(props) {
-    const userName = useContext(UserContext);
+    const { userName, roomName } = useContext(UserContext);
+
+
     const [messageValue, setMessageValue] = useState('');
 
     function handleKeyDown(event) {
@@ -15,6 +17,7 @@ function ChatInput(props) {
 
             // - init message object
             const messageObj = {
+                roomName: roomName,
                 userName: userName,
                 body: messageBody
             };

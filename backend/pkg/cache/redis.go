@@ -240,20 +240,20 @@ func (rs *RedisStore) DeleteMessagesFromRoom(roomName string) error {
 	if err != nil {
 		return fmt.Errorf("failed to retrieve messages for room: %v", err)
 	}
-	fmt.Println("\nredis: DeleteMessagesFromRoom lendocs=", len(docs))
+
 	// 3. Loop through the retrieved docs and delete each one
 	for _, doc := range docs {
 		// Delete JSON data from Redis
-		fmt.Printf("\nredis:  DeleteMessagesFromRoom %v:\n", doc)
+		// fmt.Printf("\nredis:  DeleteMessagesFromRoom %v:\n", doc)
 		_, err := rs.rejsonHandler.JSONDel(doc.Id[2:], ".")
 		if err != nil {
-			fmt.Printf("failed to delete message JSON for id %v", doc.Id)
+
 			return fmt.Errorf("failed to delete message JSON for id %s: %v", doc.Id, err)
 		}
 		// Delete the document from RediSearch index
 		err = rs.rediSearchClient.DeleteDocument(doc.Id)
 		if err != nil {
-			fmt.Printf("failed to delete Document for id %v", doc.Id)
+
 			return fmt.Errorf("failed to delete message index for id %s: %v", doc.Id, err)
 		}
 	}

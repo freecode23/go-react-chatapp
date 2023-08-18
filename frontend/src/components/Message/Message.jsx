@@ -3,8 +3,9 @@ import './Message.scss';
 import UserContext from '../../utils/UserContext';
 
 function Message(props) {
-    const currUserName = useContext(UserContext);
-    const isMessageFromCurrentUser = props.userName === currUserName;
+    const { userName} = useContext(UserContext);
+
+    const isMessageFromCurrentUser = props.userName === userName;
     const messageClass = isMessageFromCurrentUser ? 'currentUser' : 'otherUser';
 
     return (
