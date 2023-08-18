@@ -11,6 +11,7 @@ type apiHandler struct {
 	Cache cache.Cache
 }
 
+// TODO pass in chatroom name to this api
 func (a *apiHandler) getChatHistory(w http.ResponseWriter, r *http.Request) {
 
 	// 1. Fetch the last 30 messages

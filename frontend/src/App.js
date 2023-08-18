@@ -1,23 +1,58 @@
-import logo from './logo.svg';
-import './App.css';
+import React, { useState, useEffect } from 'react';
+
+import ChatHistory from './components/ChatHistory';
+import ChatInput from './components/ChatInput';
+import Header from './components/Header';
+import UserContext from './utils/UserContext';
+
+import {socketConnect, sendMsg} from './socketApi'
+import fetchChatHistory from './restApi';
+import generator from './utils/UniqueNameGenerator'
+
 
 function App() {
+
+  // 0. init random name for this user 
+  const [userName] = useState(generator.generateUniqueName());
+
+  // 1. init chat history
+  const [chatHistory, setChatHistory] = useState([]);
+
+  // 2. every render
+  useEffect(() => {
+
+    // 1.  fetch all history
+    async function fetchData() {
+      const messageObj = await fetchChatHistory();
+      setChatHistory(messageObj.reverse());
+    }
+    fetchData();
+
+    // 2. connect to socket with call back function
+    // that adds message to chat history everytime theres a new message received
+    // from any other clients
+    socketConnect((msgEvent) => {
+
+      // contains body and userName and type
+      const jsonData = JSON.parse(msgEvent.data) 
+
+      // get message from sockets and add to history if there's a new incoming message
+      const chatUserBody = {
+        userName: jsonData.userName,
+        body: jsonData.body
+      }
+      setChatHistory(prevChatHistory => [...prevChatHistory, chatUserBody]);
+
+    });
+  }, []);
+
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <UserContext.Provider value={userName}>
+      <Header/>
+      <ChatHistory chatHistory={chatHistory}/>
+      <ChatInput sendFunc={sendMsg}/>
+      </UserContext.Provider>
     </div>
   );
 }

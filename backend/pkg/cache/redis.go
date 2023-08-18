@@ -23,38 +23,6 @@ type RedisStore struct {
 	rediSearchClient *redisearch.Client
 }
 
-func createChatHistoryIndex() *redisearch.Client {
-	// 1. Check if "chatHistoryIndex" already exists
-	rediSearchClient := redisearch.NewClient("localhost:6379", "chatHistoryIndex")
-
-	_, err := rediSearchClient.Info()
-	// 2. Index already exists. So, we return the client.
-	if err == nil {
-		return rediSearchClient
-
-		// 3. If there's an error other than "Unknown Index name", it's unexpected. Handle appropriately.
-	} else if !strings.Contains(err.Error(), "Unknown index name") {
-
-		log.Fatal("redis: error checking index:", err)
-	}
-
-	// 4. If we reached here, the index doesn't exist. So, we proceed to create it.
-	// Create a schema
-	sc := redisearch.NewSchema(redisearch.DefaultOptions).
-		AddField(redisearch.NewTextField("room")).
-		AddField(redisearch.NewTextField("user")).
-		AddField(redisearch.NewTextFieldOptions("body", redisearch.TextFieldOptions{Weight: 5.0})).
-		AddField(redisearch.NewNumericFieldOptions("timestamp", redisearch.NumericFieldOptions{Sortable: true}))
-
-	// 5. Create the index with the given schema
-	if err := rediSearchClient.CreateIndex(sc); err != nil {
-		log.Fatal("redis: createIndex error:", err)
-	}
-
-	// 6. Return the RediSearch client
-	return rediSearchClient
-}
-
 func NewRedisStore() *RedisStore {
 	// 1. init redisClient
 	rdclient := redis.NewClient(&redis.Options{
@@ -118,13 +86,7 @@ func (rs *RedisStore) SaveMessageToStore(msgStruct message.Message) error {
 	return nil
 }
 
-func convertStringSecToTimeStamp(secondsStr string) time.Time {
-	secondsInt, _ := strconv.ParseInt(secondsStr, 10, 64)
-
-	timestamp := time.Unix(secondsInt, 0)
-	return timestamp
-}
-
+// TODO PASS IN ROOM NAME
 func (rs *RedisStore) GetLastMessagesStruct() ([]message.Message, error) {
 
 	// 1. Create a query for the last 10 messages based on timestamp.
@@ -161,21 +123,6 @@ func (rs *RedisStore) GetLastMessagesStruct() ([]message.Message, error) {
 	return messagesOut, nil
 }
 
-func (rs *RedisStore) countMessagesInRoom(roomName string) (int, error) {
-
-	agg := redisearch.NewAggregateQuery().
-		Load([]string{"room"}). // Note: Do not use "@" here, as it's used for referencing, not loading
-		Filter("@room=='roomX'")
-
-	_, total, err := rs.rediSearchClient.Aggregate(agg)
-	if err != nil {
-		fmt.Println("redis: error cannot get total:", err)
-		return 0, err
-	}
-
-	return total, nil
-}
-
 func (rs *RedisStore) UploadMessagesToS3() {
 	const threshold = 10
 
@@ -209,8 +156,77 @@ func (rs *RedisStore) UploadMessagesToS3() {
 
 		// 4. If the upload is successful, remove all messages from Redis
 		// TODO: REMOVE ALL MESSAGES OF THIS ROOM from REDIS
+		// TODO: pass in room from chatroom to this from chatroom.go
 		if err != nil {
 			log.Printf("redis: Failed to delete chatHistory: %v", err)
 		}
 	}
+}
+
+/*
+*
+Helper 0. create redis index of chat history so we can query fast
+*
+*/
+func createChatHistoryIndex() *redisearch.Client {
+	// 1. Check if "chatHistoryIndex" already exists
+	rediSearchClient := redisearch.NewClient("localhost:6379", "chatHistoryIndex")
+
+	_, err := rediSearchClient.Info()
+	// 2. Index already exists. So, we return the client.
+	if err == nil {
+		return rediSearchClient
+
+		// 3. If there's an error other than "Unknown Index name", it's unexpected. Handle appropriately.
+	} else if !strings.Contains(err.Error(), "Unknown index name") {
+		log.Fatal("redis: error checking index:", err)
+	}
+
+	// 4. If we reached here, the index doesn't exist. So, we proceed to create it.
+	// Create a schema
+	sc := redisearch.NewSchema(redisearch.DefaultOptions).
+		AddField(redisearch.NewTextField("room")).
+		AddField(redisearch.NewTextField("user")).
+		AddField(redisearch.NewTextFieldOptions("body", redisearch.TextFieldOptions{Weight: 5.0})).
+		AddField(redisearch.NewNumericFieldOptions("timestamp", redisearch.NumericFieldOptions{Sortable: true}))
+
+	// 5. Create the index with the given schema
+	if err := rediSearchClient.CreateIndex(sc); err != nil {
+		log.Fatal("redis: createIndex error:", err)
+	}
+
+	// 6. Return the RediSearch client
+	return rediSearchClient
+}
+
+/*
+*
+Helper 1. count total number of messages in a chat room
+*
+*/
+func (rs *RedisStore) countMessagesInRoom(roomName string) (int, error) {
+
+	agg := redisearch.NewAggregateQuery().
+		Load([]string{"room"}). // Note: Do not use "@" here, as it's used for referencing, not loading
+		Filter("@room=='roomX'")
+
+	_, total, err := rs.rediSearchClient.Aggregate(agg)
+	if err != nil {
+		fmt.Println("redis: error cannot get total:", err)
+		return 0, err
+	}
+
+	return total, nil
+}
+
+/*
+*
+Helper 2: Convert string in second to unix time stamp
+*
+*/
+func convertStringSecToTimeStamp(secondsStr string) time.Time {
+	secondsInt, _ := strconv.ParseInt(secondsStr, 10, 64)
+
+	timestamp := time.Unix(secondsInt, 0)
+	return timestamp
 }

@@ -1,0 +1,29 @@
+.Message {
+    display: inline-block;
+    margin: 20px;
+    padding: 20px 15px;
+    border-radius: 20px;
+
+    max-width: 70%;
+    word-wrap: break-word;
+    
+    
+    
+    .userName {
+        font-weight: bold;
+    }
+
+    .message {
+        word-wrap: break-word; 
+    }
+
+    &.currentUser {
+        margin-left: auto; // Pushes the message to the right
+        background-color: #DCF8C6; // WhatsApp-like green color for sent messages
+    }
+
+    &.otherUser {
+        margin-right: auto; // Aligns the message to the left
+        background-color: #ECECEC; // Gray color for received messages
+    }
+}
