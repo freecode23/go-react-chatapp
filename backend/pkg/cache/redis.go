@@ -58,7 +58,6 @@ func (rs *RedisStore) SaveMessageToStore(msgStruct message.Message) error {
 
 	// 2. create key for the json object
 	key := msgStruct.ID
-	msgStruct.RoomName = "roomX"
 
 	// 3. Insert the message into Redis using RedisJSON
 	_, err = rs.rejsonHandler.JSONSet(key, ".", msgJSONbytes)
@@ -86,15 +85,10 @@ func (rs *RedisStore) SaveMessageToStore(msgStruct message.Message) error {
 	return nil
 }
 
-// TODO PASS IN ROOM NAME
-func (rs *RedisStore) GetLastMessagesStruct() ([]message.Message, error) {
+func (rs *RedisStore) GetLastMessagesStruct(roomName string) ([]message.Message, error) {
 
-	// 1. Create a query for the last 10 messages based on timestamp.
-	// Create a sorting key
-	// q := redisearch.NewQuery("*").SetSortBy("timestamp", false). // Order by timestamp descending.
-	// 								Limit(0, 10)
-	// 1. Create a query for all messages from the given room, based on the room name.
-	q := redisearch.NewQuery(fmt.Sprintf("@room:'%s'", "roomX")).
+	// 1. Create a query to retrieve all messages based on the room name.
+	q := redisearch.NewQuery(fmt.Sprintf("@room:'%s'", roomName)).
 		SetSortBy("timestamp", false) // Order by timestamp descending.
 
 	// 2. Execute the query
@@ -123,11 +117,11 @@ func (rs *RedisStore) GetLastMessagesStruct() ([]message.Message, error) {
 	return messagesOut, nil
 }
 
-func (rs *RedisStore) UploadMessagesToS3() {
+func (rs *RedisStore) UploadMessagesToS3(roomName string) {
 	const threshold = 10
 
 	// 0. get current redis chatHistory length
-	length, err := rs.countMessagesInRoom("roomX")
+	length, err := rs.countMessagesInRoom(roomName)
 	if err != nil {
 		log.Printf("redis: Failed to get chatHistory length: %v", err)
 	}
@@ -136,7 +130,7 @@ func (rs *RedisStore) UploadMessagesToS3() {
 	if length >= threshold {
 
 		// 1. Retrieve 10 messages - using
-		chatHistory10Struct, _ := rs.GetLastMessagesStruct()
+		chatHistory10Struct, _ := rs.GetLastMessagesStruct(roomName)
 
 		// 2. Convert chatHistory to string
 		var chatHistory10Str []string
@@ -155,8 +149,7 @@ func (rs *RedisStore) UploadMessagesToS3() {
 		storage.SaveChatHistory(chatHistory10Str)
 
 		// 4. If the upload is successful, remove all messages from Redis
-		// TODO: REMOVE ALL MESSAGES OF THIS ROOM from REDIS
-		// TODO: pass in room from chatroom to this from chatroom.go
+		err := rs.DeleteMessagesFromRoom(roomName)
 		if err != nil {
 			log.Printf("redis: Failed to delete chatHistory: %v", err)
 		}
@@ -229,4 +222,40 @@ func convertStringSecToTimeStamp(secondsStr string) time.Time {
 
 	timestamp := time.Unix(secondsInt, 0)
 	return timestamp
+}
+
+/*
+*
+Helper 3: delete all messages history from a chatroom
+*
+*/
+
+func (rs *RedisStore) DeleteMessagesFromRoom(roomName string) error {
+
+	// 1. Create a query to fetch all message IDs associated with the room
+	q := redisearch.NewQuery(fmt.Sprintf("@room:'%s'", roomName))
+
+	// 2. Execute the query
+	docs, _, err := rs.rediSearchClient.Search(q)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve messages for room: %v", err)
+	}
+	fmt.Println("\nredis: DeleteMessagesFromRoom lendocs=", len(docs))
+	// 3. Loop through the retrieved docs and delete each one
+	for _, doc := range docs {
+		// Delete JSON data from Redis
+		fmt.Printf("\nredis:  DeleteMessagesFromRoom %v:\n", doc)
+		_, err := rs.rejsonHandler.JSONDel(doc.Id[2:], ".")
+		if err != nil {
+			fmt.Printf("failed to delete message JSON for id %v", doc.Id)
+			return fmt.Errorf("failed to delete message JSON for id %s: %v", doc.Id, err)
+		}
+		// Delete the document from RediSearch index
+		err = rs.rediSearchClient.DeleteDocument(doc.Id)
+		if err != nil {
+			fmt.Printf("failed to delete Document for id %v", doc.Id)
+			return fmt.Errorf("failed to delete message index for id %s: %v", doc.Id, err)
+		}
+	}
+	return nil
 }

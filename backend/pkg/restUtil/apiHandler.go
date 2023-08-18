@@ -5,17 +5,24 @@ import (
 	"net/http"
 
 	"github.com/freecode23/go-react-chatapp/pkg/cache"
+	"github.com/gorilla/mux"
 )
 
 type apiHandler struct {
 	Cache cache.Cache
 }
 
-// TODO pass in chatroom name to this api
 func (a *apiHandler) getChatHistory(w http.ResponseWriter, r *http.Request) {
+	// 0. Extract chatroom name from the URL
+	vars := mux.Vars(r)
+	chatroomName, exists := vars["chatroomName"]
+	if !exists {
+		http.Error(w, "Chatroom not specified", http.StatusBadRequest)
+		return
+	}
 
-	// 1. Fetch the last 30 messages
-	messagesStruct, err := a.Cache.GetLastMessagesStruct()
+	// 1. Fetch the last messages
+	messagesStruct, err := a.Cache.GetLastMessagesStruct(chatroomName)
 
 	if err != nil {
 		http.Error(w, "Failed to fetch chat history", http.StatusInternalServerError)

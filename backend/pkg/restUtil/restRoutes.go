@@ -25,7 +25,7 @@ func SetupRestRoutes(cacheIf cache.Cache) {
 	}
 
 	// 2. assign routes and method
-	muxRouter.HandleFunc("/chatHistory", ah.getChatHistory).Methods("GET")
+	muxRouter.HandleFunc("/chatHistory/{chatroomName}", ah.getChatHistory).Methods("GET")
 
 	// 3. Use the CORS middleware for your router
 	handler := cors.Default().Handler(muxRouter)

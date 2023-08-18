@@ -1,7 +1,6 @@
 package socketUtil
 
 import (
-	"fmt"
 	"log"
 	"sync"
 
@@ -49,8 +48,7 @@ func (c *client) listenMessages() {
 
 		// 5. write on channel
 		c.chatroom.messagesChan <- *msgStructPtr
-
-		fmt.Println("\nclient: push msg username:", msgStructPtr.UserName, "body:", msgStructPtr.Body)
+		// fmt.Printf("\nclient: push msgStructPtr:%v\n", msgStructPtr)
 	}
 
 }
