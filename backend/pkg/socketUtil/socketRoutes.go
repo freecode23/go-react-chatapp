@@ -9,18 +9,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var chatroomsMap = make(map[string]*chat.Chatroom)
-
-func getOrCreateChatroom(cacheObj cache.Cache, chatroomName string) *chat.Chatroom {
-	// 1. return existing chatroom if exist
-	if chatroom, exists := chatroomsMap[chatroomName]; exists {
-		return chatroom
-	}
-
-	// 2. return new chatroom otherwise
-	return chat.NewChatroom(cacheObj, chatroomName)
-}
-
 /*
 *
  1. 0 Create or get chatroom for this client
@@ -31,7 +19,7 @@ func getOrCreateChatroom(cacheObj cache.Cache, chatroomName string) *chat.Chatro
 
 *
 */
-func handleNewClient(cacheIf cache.Cache, w http.ResponseWriter, r *http.Request) {
+func handleNewClient(cm *chat.ChatroomManager, cacheIf cache.Cache, w http.ResponseWriter, r *http.Request) {
 
 	// 0. Create or get chatroom for this client
 	// - Extract chatroom name from the URL
@@ -42,8 +30,8 @@ func handleNewClient(cacheIf cache.Cache, w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// - check if chatroom already exist in map, if not create a new one
-	chatroomPtr := getOrCreateChatroom(cacheIf, chatroomName)
+	// - check if chatroom already exist in map, if not create a new one and add to map in manager
+	chatroomPtr := cm.GetOrCreateChatroom(cacheIf, chatroomName)
 
 	// 1. go routine thread
 	// set up a single chatroom in the background
@@ -67,18 +55,24 @@ func handleNewClient(cacheIf cache.Cache, w http.ResponseWriter, r *http.Request
 
 	// 4. read messages from client and broadcast them (infinite loop)
 	clientPtr.ListenMessages()
-	fmt.Println("socketRoutes: currentRooms", chatroomsMap)
+
 }
 
-func SetupWebsocketRoutes(cacheIf cache.Cache) {
-	mRouter := mux.NewRouter()
+/*
+*
+Interface can take in a pointer or an object
+we want to change the data in chatroom manager, so we should pass a pointer
+*
+*/
+func SetupWebsocketRoutes(cacheIf cache.Cache, cm *chat.ChatroomManager) {
 
-	// 1. Define the callback function when client calls
+	// 2. Define the callback function when client calls
 	websocketHandlerCallback := func(w http.ResponseWriter, r *http.Request) {
-		handleNewClient(cacheIf, w, r)
+		handleNewClient(cm, cacheIf, w, r)
 	}
 
 	// 2. set up what to do on this route
+	mRouter := mux.NewRouter()
 	mRouter.HandleFunc("/start/{chatroomName}", websocketHandlerCallback)
 
 	// 3. serve

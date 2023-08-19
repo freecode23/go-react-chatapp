@@ -1,19 +1,18 @@
-// initiate handshake
-var socket = new WebSocket('ws://localhost:9000/start')
 
+// init a connection to a chatroom
+let initChatroomSocket = (chatroom, cb) => {
 
-// init connect function
-let socketConnect = (cb) => {
-    // console.log("connecting")
+    // Create the WebSocket for the specific chatroom.
+    let socket = new WebSocket(`ws://localhost:9000/start/${chatroom}`);
+    
 
-
-    // sets up an event listener on the socket
+    // Sets up rules on what happen on various events on this socket
+    // case1: sets up an event listener on the socket
     socket.onopen =  () => {
         console.log("socket starts listening")
     }
 
-
-    // receive message
+    // case2: receive message
     socket.onmessage = (msg) => {
         // console.log("socket message from webs:", msg)
 
@@ -21,18 +20,27 @@ let socketConnect = (cb) => {
         cb(msg);
     }
 
+    // case3: close socket
     socket.onclose = (event) => {
         console.log("socket closed connection:", event)
     }
 
+     // case4: socket error
     socket.onerror = (err) => {
         console.log("socket error:", err)
     }
+
+    // return an object chatroom socket
+    // that can call socketSendMsg function
+    return {
+        socketSendMsg: (msg) => {
+            console.log("socket sending message:", msg);
+            socket.send(JSON.stringify(msg));
+        },
+        // Any other functions that operate on this socket can be added here.
+    };
 }
 
-let sendMsg = (msg) => {
-    console.log("socket sending message:",msg)
-    socket.send(JSON.stringify(msg));
-}
 
-export {socketConnect, sendMsg}
+
+export {initChatroomSocket}

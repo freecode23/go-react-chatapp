@@ -2,9 +2,11 @@ package restUtil
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/freecode23/go-react-chatapp/pkg/cache"
+	"github.com/freecode23/go-react-chatapp/pkg/chat"
 	"github.com/gorilla/mux"
 )
 
@@ -40,5 +42,20 @@ func (a *apiHandler) getChatHistory(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	// 4. send back to client
+	w.Write(jsonBytes)
+}
+
+func (a *apiHandler) getAllChatrooms(cm *chat.ChatroomManager, w http.ResponseWriter, r *http.Request) {
+	chatroomNames := cm.GetAllChatroomsNames()
+
+	// Convert chatrooms to JSON
+	jsonBytes, err := json.Marshal(chatroomNames)
+	if err != nil {
+		http.Error(w, "Failed to convert chatrooms to JSON", http.StatusInternalServerError)
+
+	}
+	fmt.Println("apiHandler: sendingback:", chatroomNames)
+	// Set the Content-Type header and write the JSON response to client
+	w.Header().Set("Content-Type", "application/json")
 	w.Write(jsonBytes)
 }
